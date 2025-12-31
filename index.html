@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat</title>
+
+<style>
+:root {
+  --text-primary: #ffffff;
+  --border-color: #333;
+  --theme-user-bg: #8b5cf6;
+  --theme-send-bg: #10a37f;
+  --theme-accent: #8b5cf6;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, Roboto, sans-serif;
+  color: var(--text-primary);
+  background: url("land.jpg") no-repeat center center fixed;
+  background-size: cover;
+  transition: background-image 0.5s ease;
+}
+
+/* LANDING PAGE */
+#landing-page {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: url("https://files.catbox.moe/rn2vyl.jpg") no-repeat center center fixed;
+  background-size: cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 1.2s ease;
+}
+
+#landing-page.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader {
+  width: 80px;
+  height: 80px;
+  border: 6px solid rgba(255,255,255,0.3);
+  border-top: 6px solid #8b5cf6;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+  margin-bottom: 40px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#landing-page h1 {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+#landing-page p {
+  font-size: 20px;
+  opacity: 0.9;
+  color: #ddd;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+}
+
+/* MAIN APP */
+#chat-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+#chat-app.visible {
+  opacity: 1;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(0,0,0,0.6);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  z-index: 1001;
+}
+
+.header img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.header .title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* HAMBURGER MENU - VISIBLE */
+#menu-btn {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  padding: 10px;
+}
+
+#menu-btn span {
+  width: 22px;
+  height: 3px;
+  background: #ffffff;
+  border-radius: 2px;
+  display: block;
+}
+
+/* OTHER BUTTONS */
+#theme-btn, #model-btn {
+  width: 40px;
+  height: 40px;
+  background: #444;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #fff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* MENUS */
+#bg-menu, #theme-menu, #model-menu {
+  position: absolute;
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px;
+  display: none;
+  z-index: 1000;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  backdrop-filter: blur(12px);
+}
+
+#bg-menu { top: 70px; right: 14px; width: 200px; }
+#theme-menu, #model-menu { bottom: 70px; left: 50%; transform: translateX(-50%); width: 280px; max-height: 400px; overflow-y: auto; }
+
+#bg-menu.show, #theme-menu.show, #model-menu.show { display: block; }
+
+.bg-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+
+.bg-option, .theme-option {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: 0.3s;
+}
+
+.bg-option:hover { border-color: var(--theme-accent); transform: scale(1.15); }
+.theme-option:hover { border-color: #fff; transform: scale(1.15); }
+
+.theme-purple { background: #8b5cf6; }
+.theme-blue { background: #3b82f6; }
+.theme-green { background: #10b981; }
+.theme-transparent { background: linear-gradient(135deg,rgba(139,92,246,0.4),rgba(255,255,255,0.15)); border: 2px dashed #8b5cf6 !important; }
+
+/* MODEL MENU */
+.model-option {
+  padding: 12px 16px;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.model-option:hover {
+  background: rgba(139,92,246,0.3);
+}
+
+.model-option.selected {
+  background: #8b5cf6;
+  font-weight: 600;
+}
+
+/* CHAT */
+#chat-container {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message {
+  max-width: 85%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
+}
+
+.user-message { background: var(--theme-user-bg); align-self: flex-end; }
+.bot-message { background: #121212; align-self: flex-start; border-bottom-left-radius: 4px; }
+
+.name-tag {
+  position: absolute;
+  top: -16px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.user-message .name-tag { right: 10px; }
+.bot-message .name-tag { left: 10px; color: var(--theme-accent); }
+
+/* INPUT */
+#input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  background: rgba(0,0,0,0.7);
+  flex-shrink: 0;
+  z-index: 1001;
+}
+
+#user-input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  background: #000;
+  color: #fff;
+  outline: none;
+}
+
+#send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: var(--theme-send-bg);
+  font-size: 18px;
+}
+
+/* PROFILE MODAL */
+#profile-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(12px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#profile-modal.show {
+  display: flex;
+  opacity: 1;
+}
+
+.profile-card {
+  background: rgba(30,30,30,0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
+  padding: 24px;
+  text-align: center;
+  width: 260px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+}
+
+.profile-card img {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 3px solid #8b5cf6;
+  margin-bottom: 16px;
+}
+
+.profile-card h2 { font-size: 22px; margin-bottom: 6px; color: #fff; }
+.profile-card .username { font-size: 16px; opacity: 0.8; margin-bottom: 16px; color: #aaa; }
+.profile-card .current-model { font-size: 14px; background: rgba(139,92,246,0.3); padding: 8px 16px; border-radius: 20px; color: #ddd; display: inline-block; }
+
+/* Transparent Theme */
+body.transparent-theme .user-message { background: rgba(139,92,246,0.25)!important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(139,92,246,0.3); }
+body.transparent-theme .bot-message { background: rgba(18,18,18,0.45)!important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+body.transparent-theme .header { background: rgba(0,0,0,0.4)!important; backdrop-filter: blur(12px); }
+body.transparent-theme #input-container { background: rgba(0,0,0,0.4)!important; backdrop-filter: blur(12px); }
+body.transparent-theme #user-input { background: rgba(0,0,0,0.5)!important; backdrop-filter: blur(8px); }
+</style>
+</head>
+
+<body>
+
+<!-- LANDING PAGE -->
+<div id="landing-page">
+  <div class="loader"></div>
+  <h1>ɴᴇʀᴜᴀʟ ᴀɪ </h1>
+  <p>ʟᴏᴀᴅɪɴɢ ʏᴏᴜʀ ᴀɪ ...🥰</p>
+</div>
+
+<!-- MAIN CHAT APP -->
+<div id="chat-app">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <img id="ai-dp" src="https://files.catbox.moe/orqaah.jpg" alt="AI">
+      <div class="title">ɴᴇᴜʀᴀʟ ᴀɪ</div>
+    </div>
+    <button id="menu-btn">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div id="bg-menu">
+      <div class="bg-grid">
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/ihbpcu.jpg')" onclick="changeBg('https://files.catbox.moe/ihbpcu.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/dv3ywb.jpg')" onclick="changeBg('https://files.catbox.moe/dv3ywb.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/guo63n.jpg')" onclick="changeBg('https://files.catbox.moe/guo63n.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/r0bhla.jpg')" onclick="changeBg('https://files.catbox.moe/r0bhla.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/rn2vyl.jpg')" onclick="changeBg('https://files.catbox.moe/rn2vyl.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/y6t1y3.jpg')" onclick="changeBg('https://files.catbox.moe/y6t1y3.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/6wj7ji.jpg')" onclick="changeBg('https://files.catbox.moe/6wj7ji.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/c6o5zb.jpg" onclick="changeBg('https://files.catbox.moe/c6o5zb.jpg')"></div>
+        <div class="bg-option" style="background-image:url('https://files.catbox.moe/qtwi3b.jpg')" onclick="changeBg('https://files.catbox.moe/qtwi3b.jpg')"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="chat-container"></div>
+
+  <div id="input-container">
+    <button id="model-btn">🤖</button>
+    <button id="theme-btn">☣️</button>
+
+    <div id="model-menu">
+        <h2> ᴅᴇᴇᴘsᴇᴇᴋ ᴍᴏᴅᴇʟ</h2>
+        <h2>--------------------</h2>
+      <div class="model-option" data-model="DeepSeek-R1-0528" data-pass="deepseek">DeepSeek-R1-0528</div>
+      <div class="model-option" data-model="DeepSeek-R1-Distil-Llama-70B" data-pass="deepseek">DeepSeek-R1-Distil-Llama-70B</div>
+      <div class="model-option" data-model="DeepSeek-V3.1" data-pass="deepseek">DeepSeek-V3.1</div>
+      <div class="model-option" data-model="DeepSeek-V3.1-Terminus" data-pass="deepseek">DeepSeek-V3.1-Terminus</div>
+      <div class="model-option" data-model="DeepSeek-V3-0324" data-pass="deepseek">DeepSeek-V3-0324</div>
+      <h2>ɢᴘᴛ ᴍᴏᴅᴇʟ</h2>
+      <h2>--------------------</h2>
+      <div class="model-option" data-model="gpt-oss-120b" data-pass="gpt">gpt-oss-120b</div>
+      <h2>ǫᴡᴜᴇɴ3 ᴍᴏᴅᴇʟ</h2>
+      <h2>--------------------</h2>
+      <div class="model-option" data-model="Qwen3-235B" data-pass="qwen">Qwen3-235B</div>
+      <div class="model-option" data-model="Qwen3-32B" data-pass="qwen">Qwen3-32B</div>
+      <h2>ʟʟᴀᴍᴀ ᴍᴏᴅᴇʟ</h2>
+      <h2>--------------------</h2>
+      <div class="model-option selected" data-model="Meta-Llama-3.1-8B-Instruct" data-pass="">ALLaM-7B-Instruct-preview (Default)</div>
+      
+      <div class="model-option" data-model="Llama-3.3-Swallow-70B-Instruct-v0.4" data-pass="llama">Llama-3.3-Swallow-70B-Instruct-v0.4</div>
+      <div class="model-option" data-model="Meta-Llama-3.1-8B-Instruct" data-pass="llama">Meta-Llama-3.1-8B-Instruct</div>
+      <div class="model-option" data-model="Meta-Llama-3.3-70B-Instruct" data-pass="llama">Meta-Llama-3.3-70B-Instruct</div>
+      <div class="model-option" data-model="Llama-4-Maverick-17B-128E-Instruct" data-pass="llama">Llama-4-Maverick-17B-128E-Instruct</div>
+      <h2>ᴡʜɪsᴘᴇʀ ɪ ᴅᴏɴᴛ ᴋɴᴏᴡ</h2>
+      <h2>--------------------</h2>
+      <div class="model-option" data-model="Whisper-Large-v3" data-pass="whisper">Whisper-Large-v3 (Audio)</div>
+    </div>
+    <div id="theme-menu">
+      <div class="theme-option theme-purple" onclick="changeTheme('purple')"></div>
+      <div class="theme-option theme-blue" onclick="changeTheme('blue')"></div>
+      <div class="theme-option theme-green" onclick="changeTheme('green')"></div>
+      <div class="theme-option theme-transparent" onclick="changeTheme('transparent')"></div>
+    </div>
+
+    <input id="user-input" placeholder="Type a message…" onkeydown="onKey(event)">
+    <button id="send-btn" onclick="send()">➤</button>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div id="profile-modal">
+  <div class="profile-card">
+    <img src="https://files.catbox.moe/orqaah.jpg" alt="AI">
+    <h2>ɴᴇᴜʀᴀʟ ᴀɪ</h2>
+    <h3>ᴏᴡɴᴇʀ:@ll_PANDA_BBY_ll</h3>
+    <h4>ᴠᴇʀsɪᴏɴ: [2.1]
+      <div class="username">@ai_assistant</div>
+    <div class="current-model" id="current-model-display">ALLaM-7B-Instruct-preview</div>
+  </div>
+</div>
+
+<script>
+const url = "https://api.sambanova.ai/v1/chat/completions";
+const headers = {
+  "Authorization": "Bearer 941f01a1-295a-4ae5-863a-d9f1b0229286",
+  "Content-Type": "application/json"
+};
+
+let messages = [{ role: "system", content: "You are a helpful AI assistant." }];
+let currentModel = "Meta-Llama-3.1-8B-Instruct";
+
+let chat, input, menuBtn, bgMenu, themeBtn, themeMenu, modelBtn, modelMenu, sendBtn, aiDp, profileModal, currentModelDisplay;
+
+function initApp() {
+  document.getElementById('landing-page').classList.add('fade-out');
+  document.getElementById('chat-app').classList.add('visible');
+
+  chat = document.getElementById("chat-container");
+  input = document.getElementById("user-input");
+  menuBtn = document.getElementById("menu-btn");
+  bgMenu = document.getElementById("bg-menu");
+  themeBtn = document.getElementById("theme-btn");
+  themeMenu = document.getElementById("theme-menu");
+  modelBtn = document.getElementById("model-btn");
+  modelMenu = document.getElementById("model-menu");
+  sendBtn = document.getElementById("send-btn");
+  aiDp = document.getElementById("ai-dp");
+  profileModal = document.getElementById("profile-modal");
+  currentModelDisplay = document.getElementById("current-model-display");
+
+  menuBtn.onclick = (e) => { e.stopPropagation(); bgMenu.classList.toggle("show"); };
+  themeBtn.onclick = (e) => { e.stopPropagation(); themeMenu.classList.toggle("show"); };
+  aiDp.onclick = (e) => { e.stopPropagation(); profileModal.classList.add("show"); };
+  sendBtn.onclick = send;
+
+  // Click 🤖 → open model list
+  modelBtn.onclick = (e) => {
+    e.stopPropagation();
+    modelMenu.classList.toggle("show");
+  };
+
+  // Click on any model → ask password if required
+  document.querySelectorAll('.model-option').forEach(option => {
+    option.onclick = (e) => {
+      e.stopPropagation();
+      const newModel = option.getAttribute('data-model');
+      const requiredPass = option.getAttribute('data-pass');
+
+      if (newModel === currentModel) {
+        modelMenu.classList.remove("show");
+        return;
+      }
+
+      if (requiredPass === "") {
+        // Default model - no password
+        switchModel(newModel, option);
+      } else {
+        const password = prompt(`Enter password for ${newModel}:`);
+        if (password === requiredPass) {
+          switchModel(newModel, option);
+        } else if (password !== null) {
+          addMessage("Incorrect password. Access denied.", false);
+        }
+      }
+      modelMenu.classList.remove("show");
+    };
+  });
+
+  function switchModel(newModel, option) {
+    document.querySelectorAll('.model-option').forEach(o => o.classList.remove('selected'));
+    option.classList.add('selected');
+    currentModel = newModel;
+    currentModelDisplay.textContent = currentModel;
+    addMessage(`Model changed to: ${currentModel}`, false);
+  }
+
+  document.onclick = () => {
+    bgMenu.classList.remove("show");
+    themeMenu.classList.remove("show");
+    modelMenu.classList.remove("show");
+    profileModal.classList.remove("show");
+  };
+
+  [bgMenu, themeMenu, modelMenu, profileModal.querySelector(".profile-card")].forEach(el => {
+    el.onclick = (e) => e.stopPropagation();
+  });
+
+  profileModal.onclick = (e) => {
+    if (e.target === profileModal) profileModal.classList.remove("show");
+  };
+}
+
+setTimeout(initApp, 2500);
+
+function scrollToBottom() {
+  requestAnimationFrame(() => chat.scrollTop = chat.scrollHeight);
+}
+
+function changeBg(url) {
+  document.body.style.backgroundImage = `url('${url}')`;
+  bgMenu.classList.remove("show");
+}
+
+function changeTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'purple') {
+    root.style.setProperty('--theme-user-bg', '#8b5cf6');
+    root.style.setProperty('--theme-send-bg', '#10a37f');
+    root.style.setProperty('--theme-accent', '#8b5cf6');
+    document.body.classList.remove('transparent-theme');
+  } else if (theme === 'blue') {
+    root.style.setProperty('--theme-user-bg', '#3b82f6');
+    root.style.setProperty('--theme-send-bg', '#10a37f');
+    root.style.setProperty('--theme-accent', '#3b82f6');
+    document.body.classList.remove('transparent-theme');
+  } else if (theme === 'green') {
+    root.style.setProperty('--theme-user-bg', '#10b981');
+    root.style.setProperty('--theme-send-bg', '#10a37f');
+    root.style.setProperty('--theme-accent', '#10b981');
+    document.body.classList.remove('transparent-theme');
+  } else if (theme === 'transparent') {
+    root.style.setProperty('--theme-user-bg', 'rgba(139, 92, 246, 0.25)');
+    root.style.setProperty('--theme-send-bg', 'rgba(16, 163, 127, 0.7)');
+    root.style.setProperty('--theme-accent', '#8b5cf6');
+    document.body.classList.add('transparent-theme');
+  }
+  themeMenu.classList.remove("show");
+}
+
+function addMessage(text, isUser, typing = false) {
+  const div = document.createElement("div");
+  div.className = "message " + (isUser ? "user-message" : "bot-message");
+
+  const name = document.createElement("div");
+  name.className = "name-tag";
+  name.textContent = isUser ? "You" : "AI";
+  div.appendChild(name);
+
+  const span = document.createElement("span");
+  div.appendChild(span);
+
+  chat.appendChild(div);
+  scrollToBottom();
+
+  if (typing) {
+    let i = 0;
+    const type = () => {
+      if (i < text.length) {
+        span.textContent += text.charAt(i++);
+        setTimeout(type, 20);
+      } else scrollToBottom();
+    };
+    type();
+  } else {
+    span.textContent = text;
+    scrollToBottom();
+  }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addMessage(text, true);
+  messages.push({ role: "user", content: text });
+  input.value = "";
+
+  const payload = {
+    model: currentModel,
+    messages: messages,
+    temperature: 0.2,
+    stream: true
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      let errorMsg = "Server error.";
+      try {
+        const err = JSON.parse(errText);
+        if (err.error?.message?.includes("Rate limit")) {
+          errorMsg = "Rate limit exceeded. Please wait a moment.";
+        } else {
+          errorMsg = "Error: " + (err.error?.message || errText);
+        }
+      } catch {}
+      addMessage(errorMsg, false);
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let botMessage = "";
+    let messageDiv = null;
+    let span = null;
+
+    messageDiv = document.createElement("div");
+    messageDiv.className = "message bot-message";
+    const name = document.createElement("div");
+    name.className = "name-tag";
+    name.textContent = "AI";
+    messageDiv.appendChild(name);
+    span = document.createElement("span");
+    messageDiv.appendChild(span);
+    chat.appendChild(messageDiv);
+    scrollToBottom();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("data: ") && line !== "data: [DONE]") {
+          try {
+            const json = JSON.parse(line.slice(6));
+            const content = json.choices[0]?.delta?.content;
+            if (content) {
+              botMessage += content;
+              span.textContent = botMessage;
+              scrollToBottom();
+            }
+          } catch {}
+        }
+      }
+    }
+
+    if (botMessage) {
+      messages.push({ role: "assistant", content: botMessage });
+    }
+
+  } catch (e) {
+    addMessage("Network error: " + e.message, false);
+  }
+}
+
+function onKey(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    send();
+  }
+}
+</script>
+
+</body>
+</html>
